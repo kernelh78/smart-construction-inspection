@@ -1,0 +1,23 @@
+# 환경 변수 및 인증 정보
+.env
+credentials.json
+token.json
+
+# Django
+*.pyc
+__pycache__/
+db.sqlite3
+
+# 가상 환경
+venv/
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

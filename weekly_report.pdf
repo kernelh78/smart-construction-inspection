@@ -1,0 +1,1 @@
+{"detail":[{"type":"missing","loc":["body","report_type"],"msg":"Field required","input":{"start_date":"2026-04-10","end_date":"2026-04-17"}}]}
