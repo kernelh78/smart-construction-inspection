@@ -55,10 +55,14 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
+          final inspProv = context.read<InspectionsProvider>();
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => DefectCreateScreen(inspectionId: inspection.id),
+              builder: (_) => ChangeNotifierProvider.value(
+                value: inspProv,
+                child: DefectCreateScreen(inspectionId: inspection.id),
+              ),
             ),
           );
           _fetchDefects();

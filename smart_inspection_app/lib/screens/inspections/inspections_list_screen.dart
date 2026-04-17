@@ -60,12 +60,16 @@ class _InspectionsListScreenState extends State<InspectionsListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
+          final inspProv = context.read<InspectionsProvider>();
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => InspectionCreateScreen(
-                siteId: widget.siteId,
-                currentUserId: context.read<AuthProvider>().currentUser!.id,
+              builder: (_) => ChangeNotifierProvider.value(
+                value: inspProv,
+                child: InspectionCreateScreen(
+                  siteId: widget.siteId,
+                  currentUserId: context.read<AuthProvider>().currentUser!.id,
+                ),
               ),
             ),
           );
@@ -122,12 +126,18 @@ class _InspectionsListScreenState extends State<InspectionsListScreen> {
                                   ),
                                 ],
                               ),
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => InspectionDetailScreen(inspection: inspection),
-                                ),
-                              ),
+                              onTap: () {
+                                final inspProv = context.read<InspectionsProvider>();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ChangeNotifierProvider.value(
+                                      value: inspProv,
+                                      child: InspectionDetailScreen(inspection: inspection),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           );
                         },
