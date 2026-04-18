@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/inspections_provider.dart';
+import '../../widgets/stt_text_field.dart';
 
 class InspectionCreateScreen extends StatefulWidget {
   final String siteId;
@@ -99,15 +100,11 @@ class _InspectionCreateScreenState extends State<InspectionCreateScreen> {
                 onChanged: (v) => setState(() => _status = v!),
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              SttTextField(
                 controller: _memoCtrl,
+                labelText: '메모 (선택)',
                 maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: '메모 (선택)',
-                  prefixIcon: Icon(Icons.notes),
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
+                alignLabelWithHint: true,
               ),
               const SizedBox(height: 24),
               SizedBox(

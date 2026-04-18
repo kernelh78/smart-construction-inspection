@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../models/site.dart';
 import '../models/inspection.dart';
+import '../models/inspection_photo.dart';
 import '../models/dashboard.dart';
 import '../models/user.dart';
 
@@ -134,6 +136,31 @@ class ApiService {
       'description': description,
     });
     return Defect.fromJson(data);
+  }
+
+  // Photos (S3 + OCR)
+  Future<List<InspectionPhoto>> getPhotos(String inspectionId) async {
+    final data = await _get('/inspections/$inspectionId/photos') as List;
+    return data.map((e) => InspectionPhoto.fromJson(e)).toList();
+  }
+
+
+  Future<Map<String, dynamic>> uploadPhoto(
+    String inspectionId,
+    Uint8List imageBytes,
+    String filename,
+  ) async {
+    final uri = Uri.parse('$baseUrl/inspections/$inspectionId/photos');
+    final request = http.MultipartRequest('POST', uri);
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.files.add(
+      http.MultipartFile.fromBytes('file', imageBytes, filename: filename),
+    );
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    return _handle(response) as Map<String, dynamic>;
   }
 
   // Dashboard
