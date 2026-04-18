@@ -24,3 +24,15 @@
 - [ ] WebSocket 에뮬레이터 E2E 테스트
 - [ ] Google Maps 지도 표시 (API 키 필요)
 - [ ] 오프라인 동기화 실환경 테스트
+
+커밋 내용 (53 files changed, 4160 insertions):
+
+구분	내용
+보고서	report_v0.3.md — Phase 1/2 전체 반영, v0.4로 업데이트
+계획서	plan_v0.1.md — Phase 1/2 완료 표기, Phase 3 로드맵 갱신
+백엔드	smart_inspection/ gitlink → 일반 디렉토리 전환, 전체 파일 직접 추적 시작
+CI/CD	.github/workflows/ci.yml, docker-compose.yml
+Flutter	ws, local_db, connectivity, map, chart 신규 파일 7개 + 기존 파일 수정
+GitHub: https://github.com/kernelh78/smart-construction-inspection — push 완료
+
+참고: smart_inspection/ 이 이전에 잘못된 gitlink(160000)로 잠겨 있었는데, 이번에 일반 디렉토리로 전환하여 앞으로는 백엔드 파일이 정상 추적됩니다.
