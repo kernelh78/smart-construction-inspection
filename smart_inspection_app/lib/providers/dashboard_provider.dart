@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 class DashboardProvider extends ChangeNotifier {
   DashboardSummary? summary;
   List<UnresolvedDefect> unresolvedDefects = [];
+  WeeklyStats? weeklyStats;
   bool loading = false;
   String? error;
 
@@ -16,9 +17,11 @@ class DashboardProvider extends ChangeNotifier {
       final results = await Future.wait([
         api.getDashboardSummary(),
         api.getUnresolvedDefects(),
+        api.getWeeklyStats(),
       ]);
       summary = results[0] as DashboardSummary;
       unresolvedDefects = results[1] as List<UnresolvedDefect>;
+      weeklyStats = results[2] as WeeklyStats;
     } catch (e) {
       error = e.toString();
     } finally {

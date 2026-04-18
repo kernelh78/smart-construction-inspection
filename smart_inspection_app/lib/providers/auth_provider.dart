@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/connectivity_service.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
@@ -41,6 +42,7 @@ class AuthProvider extends ChangeNotifier {
       token = result.token;
       currentUser = result.user;
       status = AuthStatus.authenticated;
+      ConnectivityService().init(ApiService(token: token));
       notifyListeners();
       return true;
     } on ApiException catch (e) {

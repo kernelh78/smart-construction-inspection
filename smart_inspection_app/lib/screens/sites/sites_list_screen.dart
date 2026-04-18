@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/sites_provider.dart';
 import 'site_detail_screen.dart';
 import 'site_create_screen.dart';
+import 'sites_map_screen.dart';
 
 class SitesListScreen extends StatefulWidget {
   const SitesListScreen({super.key});
@@ -54,6 +55,14 @@ class _SitesListScreenState extends State<SitesListScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _fetch),
+          IconButton(
+            icon: const Icon(Icons.map_outlined),
+            tooltip: '지도 보기',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SitesMapScreen()),
+            ),
+          ),
         ],
       ),
       floatingActionButton: isAdmin

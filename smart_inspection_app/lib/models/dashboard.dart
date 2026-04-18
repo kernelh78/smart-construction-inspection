@@ -54,3 +54,47 @@ class UnresolvedDefect {
         createdAt: json['created_at'],
       );
 }
+
+class DailyInspectionStat {
+  final String date;
+  final int count;
+  final int passCount;
+
+  DailyInspectionStat({required this.date, required this.count, required this.passCount});
+
+  factory DailyInspectionStat.fromJson(Map<String, dynamic> json) => DailyInspectionStat(
+        date: json['date'],
+        count: json['count'],
+        passCount: json['pass_count'],
+      );
+}
+
+class DefectSeverityStat {
+  final int critical;
+  final int major;
+  final int minor;
+  final int total;
+
+  DefectSeverityStat({required this.critical, required this.major, required this.minor, required this.total});
+
+  factory DefectSeverityStat.fromJson(Map<String, dynamic> json) => DefectSeverityStat(
+        critical: json['critical'],
+        major: json['major'],
+        minor: json['minor'],
+        total: json['total'],
+      );
+}
+
+class WeeklyStats {
+  final List<DailyInspectionStat> dailyInspections;
+  final DefectSeverityStat defectSeverity;
+
+  WeeklyStats({required this.dailyInspections, required this.defectSeverity});
+
+  factory WeeklyStats.fromJson(Map<String, dynamic> json) => WeeklyStats(
+        dailyInspections: (json['daily_inspections'] as List)
+            .map((e) => DailyInspectionStat.fromJson(e))
+            .toList(),
+        defectSeverity: DefectSeverityStat.fromJson(json['defect_severity']),
+      );
+}

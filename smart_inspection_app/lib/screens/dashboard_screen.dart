@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/ws_provider.dart';
 import '../models/dashboard.dart';
+import '../widgets/weekly_bar_chart.dart';
+import '../widgets/defect_pie_chart.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -15,12 +18,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fetch());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetch();
+      context.read<WsProvider>().addListener(_onWsNotification);
+    });
   }
+
+  @override
+  void dispose() {
+    context.read<WsProvider>().removeListener(_onWsNotification);
+    super.dispose();
+  }
+
+  WsNotification? _lastShown;
 
   void _fetch() {
     final api = context.read<AuthProvider>().api;
     context.read<DashboardProvider>().fetch(api);
+  }
+
+  void _onWsNotification() {
+    final ws = context.read<WsProvider>();
+    final latest = ws.latest;
+    if (latest == null || latest == _lastShown) return;
+    _lastShown = latest;
+
+    final color = switch (latest.severity) {
+      'critical' => Colors.red.shade700,
+      'major'    => Colors.orange.shade700,
+      _          => Colors.yellow.shade800,
+    };
+    final label = switch (latest.severity) {
+      'critical' => '심각',
+      'major'    => '주요',
+      _          => '경미',
+    };
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: color,
+        duration: const Duration(seconds: 4),
+        content: Row(children: [
+          const Icon(Icons.warning_amber_rounded, color: Colors.white),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('[$label] ${latest.description}',
+                style: const TextStyle(color: Colors.white)),
+          ),
+        ]),
+      ),
+    );
+    _fetch();
   }
 
   @override
@@ -53,6 +101,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _UserCard(name: auth.currentUser?.name ?? '', role: auth.currentUser?.role ?? ''),
                       const SizedBox(height: 16),
                       if (dash.summary != null) _SummaryGrid(summary: dash.summary!),
+                      const SizedBox(height: 16),
+                      if (dash.weeklyStats != null)
+                        WeeklyBarChart(data: dash.weeklyStats!.dailyInspections),
+                      const SizedBox(height: 16),
+                      if (dash.weeklyStats != null)
+                        DefectPieChart(stat: dash.weeklyStats!.defectSeverity),
                       const SizedBox(height: 16),
                       _UnresolvedDefectsCard(defects: dash.unresolvedDefects),
                     ],

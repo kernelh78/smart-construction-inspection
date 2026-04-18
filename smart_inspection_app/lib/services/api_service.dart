@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../models/site.dart';
 import '../models/inspection.dart';
-import '../models/inspection_photo.dart';
 import '../models/dashboard.dart';
+import '../models/inspection_photo.dart';
 import '../models/user.dart';
 
 class ApiException implements Exception {
@@ -172,5 +172,10 @@ class ApiService {
   Future<List<UnresolvedDefect>> getUnresolvedDefects() async {
     final data = await _get('/dashboard/defects') as List;
     return data.map((e) => UnresolvedDefect.fromJson(e)).toList();
+  }
+
+  Future<WeeklyStats> getWeeklyStats() async {
+    final data = await _get('/dashboard/weekly-stats');
+    return WeeklyStats.fromJson(data);
   }
 }
