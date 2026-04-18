@@ -212,7 +212,103 @@ curl http://localhost:8000/api/v1/inspections/{inspection_id}/photos \
 
 ---
 
-## 5. 알려진 제약사항
+## 5. PostgreSQL 프로덕션 연결 검증
+
+### 사전 준비
+```bash
+# .env 파일에 PostgreSQL URL 설정
+DATABASE_URL=postgresql://smart_user:smart_password@192.168.0.35:5432/smart_inspection_db
+```
+
+### 테스트 방법
+
+#### 5-1. Alembic 마이그레이션 상태 확인
+```bash
+cd smart_inspection
+source venv/bin/activate
+alembic current      # 현재 적용된 revision 확인
+alembic history      # 전체 이력 확인
+```
+
+#### 5-2. 백엔드 서버 PostgreSQL 연결 확인
+```bash
+# PostgreSQL URL로 서버 기동
+DATABASE_URL=postgresql://smart_user:smart_password@192.168.0.35:5432/smart_inspection_db \
+  uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# 로그에 "Application startup complete" 확인
+# Swagger: http://localhost:8000/docs
+```
+
+#### 5-3. CRUD 통합 테스트
+```bash
+# 로그인
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -d "username=admin@smartinspection.com&password=admin123"
+
+# 현장 목록 조회 (PostgreSQL에서 반환되는지 확인)
+curl http://localhost:8000/api/v1/sites \
+  -H "Authorization: Bearer {token}"
+```
+
+#### 5-4. 씨드 데이터 삽입
+```bash
+# PostgreSQL URL 설정 후 씨드 실행
+DATABASE_URL=postgresql://smart_user:smart_password@192.168.0.35:5432/smart_inspection_db \
+  python -m app.core.seed
+```
+
+### 확인 포인트
+- [ ] `alembic current`가 `7fc9390837e0` 반환하는지 확인
+- [ ] 서버 기동 시 PostgreSQL 연결 오류 없는지 확인
+- [ ] 씨드 데이터 삽입 후 API 조회 정상 동작 확인
+- [ ] SQLite fallback이 필요한 경우 `DATABASE_URL` 미설정 시 자동 전환 확인
+
+---
+
+## 6. 릴리즈 APK 실기기 설치 및 동작 확인
+
+### 사전 준비
+- Android 실기기 준비 (API 24 이상)
+- 기기 설정 → 개발자 옵션 → USB 디버깅 활성화
+- 기기 설정 → 보안 → 알 수 없는 출처 허용
+
+### 테스트 방법
+
+#### 6-1. APK 실기기 설치
+```bash
+# ADB로 설치
+adb install smart_inspection_app/build/app/outputs/flutter-apk/app-release.apk
+
+# 또는 파일 직접 전송 후 설치
+# 파일 경로: build/app/outputs/flutter-apk/app-release.apk (49MB)
+```
+
+#### 6-2. 서명 검증
+```bash
+# APK 서명 확인
+keytool -printcert -jarfile app-release.apk
+# Owner: CN=Smart Inspection, OU=Dev, O=SmartDB, L=Seoul, ST=Seoul, C=KR 확인
+```
+
+#### 6-3. 실기기 기능 테스트
+- 로그인 → JWT 토큰 정상 발급 및 저장 확인
+- 현장/점검/결함 CRUD 확인
+- STT: 실기기 마이크로 한국어 음성 입력 확인 (에뮬레이터보다 정확도 높음)
+- 카메라: 실 카메라로 사진 촬영 후 OCR 확인
+- 릴리즈 빌드 ProGuard 난독화 후 앱 정상 동작 확인
+
+### 확인 포인트
+- [ ] 릴리즈 APK 설치 및 실행 성공
+- [ ] ProGuard 난독화 후 API 통신 정상 동작 확인
+- [ ] 실기기에서 STT 한국어 인식 정확도 확인
+- [ ] 실기기 카메라 OCR 동작 확인
+- [ ] `flutter_secure_storage` 토큰 암호화 저장 확인
+- [ ] 앱 종료 후 재진입 시 자동 로그인 확인
+
+---
+
+## 7. 알려진 제약사항
 
 | 항목 | 제약 | 비고 |
 |------|------|------|

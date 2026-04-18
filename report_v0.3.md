@@ -1,8 +1,8 @@
 # 스마트 건설 감리 시스템 - 개발 진행 보고서 (v0.3)
 
 **작성일**: 2026-04-18  
-**버전**: v0.3 (최종 업데이트: OCR/STT + S3 이미지 업로드 추가)  
-**상태**: 백엔드 서버 정상 작동 중 + Android 모바일 앱 개발 및 에뮬레이터 테스트 완료
+**버전**: v0.3 (최종 업데이트: 릴리즈 APK 빌드 완료)  
+**상태**: 백엔드 서버 정상 작동 중 + Android 모바일 앱 릴리즈 APK 빌드 완료 + PostgreSQL 마이그레이션 완료
 
 ---
 
@@ -16,7 +16,7 @@
 #### 백엔드
 - **프레임워크**: FastAPI 0.136.0
 - **서버**: Uvicorn 0.44.0
-- **데이터베이스**: SQLite (개발), PostgreSQL (프로덕션 권장)
+- **데이터베이스**: SQLite (로컬 fallback), PostgreSQL 16 / PostGIS (프로덕션, 192.168.0.35)
 - **ORM**: SQLAlchemy 2.0.49
 - **인증**: JWT (python-jose)
 - **비밀번호 해싱**: bcrypt
@@ -183,8 +183,13 @@
 SmartDB/
 ├── smart_inspection/              # FastAPI 백엔드
 │   ├── main.py
-│   ├── requirements.txt           # 의존성 목록 (신규 v0.3)
-│   ├── .env.example               # AWS 환경변수 템플릿 (신규 v0.3)
+│   ├── requirements.txt           # psycopg2-binary, alembic 추가 (v0.3)
+│   ├── .env.example               # AWS + PostgreSQL 환경변수 템플릿 (v0.3)
+│   ├── alembic.ini                # Alembic 설정 (신규 v0.3)
+│   ├── alembic/                   # DB 마이그레이션 (신규 v0.3)
+│   │   ├── env.py
+│   │   └── versions/
+│   │       └── 7fc9390837e0_initial_schema.py
 │   ├── server.log
 │   ├── app/
 │   │   ├── database.py
@@ -204,7 +209,12 @@ SmartDB/
 │
 └── smart_inspection_app/          # Flutter Android 앱
     ├── android/
-    │   └── app/src/main/AndroidManifest.xml  # RECORD_AUDIO, CAMERA 권한 추가 (v0.3)
+    │   ├── key.properties                    # 서명 키 정보 (gitignore, 신규 v0.3)
+    │   └── app/
+    │       ├── build.gradle.kts              # 릴리즈 서명 + ProGuard 설정 (v0.3)
+    │       ├── smart_inspection.jks          # RSA 서명 키스토어 (gitignore, 신규 v0.3)
+    │       ├── proguard-rules.pro
+    │       └── src/main/AndroidManifest.xml  # RECORD_AUDIO, CAMERA 권한 추가 (v0.3)
     ├── lib/
     │   ├── main.dart
     │   ├── models/
@@ -334,12 +344,15 @@ sudo apt-get install tesseract-ocr tesseract-ocr-kor
 - [x] GitHub 저장소 업로드
 - [x] OCR/STT 연동 (pytesseract + speech_to_text)
 - [x] S3 이미지 업로드 (boto3)
+- [x] PostgreSQL 마이그레이션 (Alembic, 192.168.0.35)
+- [x] 릴리즈 APK 빌드 (RSA 서명, ProGuard, 49MB)
 
-### 7.2 우선순위 1: 프로덕션 준비
-- [ ] PostgreSQL 마이그레이션 (SQLite → PostgreSQL)
-- [ ] 환경 변수 관리 강화
-- [ ] CORS 설정 제한
-- [ ] Flutter Release APK 빌드 및 서명
+### 7.2 우선순위 1: 미테스트 항목 (Fortest.md 참조)
+- [ ] OCR 실제 환경 테스트 (Tesseract 설치 필요)
+- [ ] STT 실기기 테스트 (에뮬레이터 마이크 제한)
+- [ ] S3 실제 업로드 (AWS 자격증명 필요)
+- [ ] PostgreSQL 프로덕션 연결 검증
+- [ ] 릴리즈 APK 실기기 설치 및 동작 확인
 
 ### 7.3 우선순위 2: 추가 기능
 - [ ] WebSocket 실시간 알림 (결함 발생 시 푸시)
@@ -373,11 +386,22 @@ cd smart_inspection_app
 flutter run -d emulator-5554
 ```
 
+### PostgreSQL 마이그레이션
+```bash
+cd smart_inspection
+source venv/bin/activate
+# .env에 DATABASE_URL=postgresql://smart_user:smart_password@192.168.0.35:5432/smart_inspection_db 설정 후
+alembic upgrade head          # 마이그레이션 적용
+alembic current               # 현재 버전 확인
+alembic history               # 마이그레이션 이력 확인
+```
+
 ### Flutter APK 빌드
 ```bash
 cd smart_inspection_app
 flutter build apk --debug     # 디버그
-flutter build apk --release   # 릴리즈 (서명 필요)
+flutter build apk --release   # 릴리즈 (RSA 서명 적용)
+# 출력: build/app/outputs/flutter-apk/app-release.apk
 ```
 
 ---
@@ -394,7 +418,23 @@ flutter build apk --release   # 릴리즈 (서명 필요)
 - ✅ 점검 상세 화면에 첨부 사진 목록 표시
 - ⏳ OCR/STT/S3 실제 환경 테스트 필요 (Fortest.md 참조)
 
-**다음 단계**: PostgreSQL 전환 또는 릴리즈 APK 빌드 진행.
+**v0.3 추가 완료 (PostgreSQL 전환)**:
+- ✅ `psycopg2-binary` + `alembic` 의존성 추가
+- ✅ Alembic 마이그레이션 초기화 및 `env.py` 설정 (DATABASE_URL 환경변수 연동)
+- ✅ 전체 스키마 초기 마이그레이션 작성 (`7fc9390837e0_initial_schema`)
+- ✅ 원격 서버(192.168.0.35) Docker PostgreSQL 16에 DB/유저 생성
+  - DB: `smart_inspection_db` / 유저: `smart_user`
+- ✅ `alembic upgrade head` 실행 — 5개 테이블 정상 생성 확인
+
+**v0.3 추가 완료 (릴리즈 APK 빌드)**:
+- ✅ RSA 2048 서명 키스토어 생성 (`smart_inspection.jks`, 유효기간 10,000일)
+- ✅ `android/key.properties` 작성 (서명 정보 분리 관리)
+- ✅ `build.gradle.kts` 릴리즈 서명 설정 + ProGuard/R8 축소 활성화
+- ✅ `flutter build apk --release` 성공
+  - 출력: `build/app/outputs/flutter-apk/app-release.apk` (49MB)
+  - 아이콘 트리쉐이킹: MaterialIcons 99.8% 용량 감소
+
+**다음 단계**: 없음 (v0.3 완료).
 
 ---
 
