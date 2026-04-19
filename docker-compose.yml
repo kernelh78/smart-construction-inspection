@@ -3,8 +3,8 @@ services:
     build:
       context: ./smart_inspection
       dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     env_file:
       - ./smart_inspection/.env
     environment:
@@ -38,8 +38,6 @@ services:
     image: redis:7-alpine
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -47,6 +45,61 @@ services:
       retries: 5
     restart: unless-stopped
 
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ""   # 브라우저는 Nginx를 통해 /api/ 로 접근
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt:ro
+      - ./nginx/certbot/www:/var/www/certbot:ro
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+    command: >
+      /bin/sh -c "nginx -g 'daemon off;'"
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+
+  backup:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: smart_user
+      POSTGRES_PASSWORD: smart_password
+      POSTGRES_DB: smart_inspection_db
+      BACKUP_DIR: /backups
+    volumes:
+      - ./scripts/backup_postgres.sh:/scripts/backup_postgres.sh:ro
+      - ./scripts/backup_entrypoint.sh:/scripts/backup_entrypoint.sh:ro
+      - backup_data:/backups
+    entrypoint: ["/scripts/backup_entrypoint.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
+  backup_data:

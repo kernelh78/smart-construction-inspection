@@ -13,3 +13,8 @@ Pillow
 pytesseract
 python-multipart
 boto3
+
+# testing
+pytest
+pytest-asyncio
+httpx

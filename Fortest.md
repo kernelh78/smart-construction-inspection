@@ -1,6 +1,6 @@
 # 미테스트 항목 (Fortest.md)
 
-> OCR/STT/S3 기능은 구현 완료되었으나 실제 환경 테스트가 필요합니다.  
+> 구현 완료되었으나 실제 환경 테스트가 필요한 항목들을 기술합니다.
 > 각 항목별 사전 준비사항과 테스트 방법을 기술합니다.
 
 ---
@@ -36,18 +36,9 @@ print('OCR 결과:', text)
 
 #### 1-2. API 엔드포인트 테스트
 ```bash
-# 서버 실행 후
 curl -X POST http://localhost:8000/api/v1/inspections/{inspection_id}/photos \
   -H "Authorization: Bearer {token}" \
   -F "file=@test_image.jpg"
-
-# 기대 응답
-# {
-#   "id": "...",
-#   "s3_key": "inspections/.../...",
-#   "ocr_result": "인식된 텍스트",
-#   "url": null  # S3 미설정 시
-# }
 ```
 
 #### 1-3. Flutter 앱 테스트
@@ -79,19 +70,16 @@ curl -X POST http://localhost:8000/api/v1/inspections/{inspection_id}/photos \
 - 권한 요청 팝업 → 허용
 - 한국어로 말하기 (예: "콘크리트 벽면 균열 발견")
 - 필드에 인식된 텍스트 자동 입력 확인
-- 마이크 아이콘 재탭 → 인식 중지
 
 #### 2-2. 결함 등록 화면 STT 테스트
-- `결함 등록` 화면 진입
-- **결함 설명** 필드 우측 마이크 아이콘 탭
+- `결함 등록` 화면 진입 → 결함 설명 필드 마이크 아이콘 탭
 - 음성 인식 후 설명 필드 자동 입력 확인
 
 ### 확인 포인트
-- [ ] 에뮬레이터에서 `SpeechToText.initialize()` 반환값이 `true`인지 확인
+- [ ] `SpeechToText.initialize()` 반환값이 `true`인지 확인
 - [ ] 한국어(`ko_KR`) 로케일 인식 정상 동작 확인
 - [ ] 인식 중 마이크 아이콘이 빨간색으로 변경되는지 확인
-- [ ] 인식 완료 후 텍스트가 커서 위치에 삽입되는지 확인
-- [ ] STT 불가 환경(권한 거부 등)에서 마이크 버튼이 표시되지 않는지 확인
+- [ ] STT 불가 환경(권한 거부)에서 마이크 버튼이 표시되지 않는지 확인
 
 ---
 
@@ -99,38 +87,12 @@ curl -X POST http://localhost:8000/api/v1/inspections/{inspection_id}/photos \
 
 ### 사전 준비
 ```bash
-# .env 파일 생성
 cp smart_inspection/.env.example smart_inspection/.env
-
-# .env 파일 편집
-AWS_ACCESS_KEY_ID=실제_액세스_키
-AWS_SECRET_ACCESS_KEY=실제_시크릿_키
-AWS_REGION=ap-northeast-2
-S3_BUCKET_NAME=실제_버킷_이름
-```
-
-#### AWS S3 버킷 설정 (없는 경우)
-1. AWS 콘솔 → S3 → 버킷 생성
-2. 버킷 이름 설정 (예: `smart-inspection-photos`)
-3. 리전: `ap-northeast-2` (서울)
-4. 퍼블릭 액세스 차단 유지 (pre-signed URL 방식 사용)
-
-#### IAM 권한 설정
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObject",
-        "s3:DeleteObject"
-      ],
-      "Resource": "arn:aws:s3:::your-bucket-name/*"
-    }
-  ]
-}
+# .env 파일 편집:
+# AWS_ACCESS_KEY_ID=실제_액세스_키
+# AWS_SECRET_ACCESS_KEY=실제_시크릿_키
+# AWS_REGION=ap-northeast-2
+# S3_BUCKET_NAME=실제_버킷_이름
 ```
 
 ### 테스트 방법
@@ -157,163 +119,291 @@ with open('test_image.jpg', 'rb') as f:
 "
 ```
 
-#### 3-3. API 통합 테스트
-```bash
-# 사진 업로드
-curl -X POST http://localhost:8000/api/v1/inspections/{inspection_id}/photos \
-  -H "Authorization: Bearer {token}" \
-  -F "file=@test_image.jpg"
-
-# 기대 응답 (S3 설정 시)
-# {
-#   "id": "...",
-#   "s3_key": "inspections/{id}/{uuid}_test_image.jpg",
-#   "ocr_result": "...",
-#   "url": "https://bucket.s3.ap-northeast-2.amazonaws.com/..."
-# }
-
-# 사진 목록 조회
-curl http://localhost:8000/api/v1/inspections/{inspection_id}/photos \
-  -H "Authorization: Bearer {token}"
-```
-
-#### 3-4. Flutter 앱 사진 목록 표시 테스트
-- 사진 업로드 후 `점검 상세` 화면으로 이동
-- **첨부 사진** 섹션에 업로드한 사진 썸네일 표시 확인
-- 썸네일 탭 시 원본 사진 + OCR 텍스트 다이얼로그 표시 확인
-
 ### 확인 포인트
 - [ ] `is_configured()` 가 `True` 반환 확인
 - [ ] S3 버킷에 `inspections/{id}/` 경로로 파일 생성되는지 확인
 - [ ] pre-signed URL이 브라우저에서 열리는지 확인 (1시간 유효)
 - [ ] S3 미설정 시 s3_key만 DB 저장, url은 `null` 반환 확인
-- [ ] Flutter `InspectionDetailScreen`에서 `Image.network(url)` 정상 로드 확인
-- [ ] 네트워크 오류 시 placeholder 이미지(`Icons.image`) 표시 확인
 
 ---
 
-## 4. 통합 플로우 테스트
+## 4. pytest 백엔드 테스트 (Phase 3 신규)
 
-### 전체 OCR + S3 플로우
-1. Flutter `결함 등록` 화면 진입
-2. **사진 촬영 후 텍스트 인식 (OCR)** 버튼 탭
-3. 카메라로 텍스트가 있는 피사체 촬영
-4. 백엔드: 이미지 수신 → S3 업로드 → OCR 처리
-5. Flutter: OCR 결과가 설명 필드에 자동 입력됨
-6. 결함 등록 완료
-7. `점검 상세` 화면에서 첨부 사진 확인
-
-### 전체 STT 플로우
-1. Flutter `점검 기록 등록` 화면 진입
-2. 메모 필드 마이크 버튼 탭 → 권한 허용
-3. "철근 배근 간격 불량 발견, 설계도면과 상이" 발화
-4. 메모 필드 자동 입력 확인
-5. 점검 등록 완료 후 상세 화면에서 메모 확인
-
----
-
-## 5. PostgreSQL 프로덕션 연결 검증
-
-### 사전 준비
-```bash
-# .env 파일에 PostgreSQL URL 설정
-DATABASE_URL=postgresql://smart_user:smart_password@192.168.0.35:5432/smart_inspection_db
-```
-
-### 테스트 방법
-
-#### 5-1. Alembic 마이그레이션 상태 확인
+### 테스트 실행
 ```bash
 cd smart_inspection
 source venv/bin/activate
-alembic current      # 현재 적용된 revision 확인
-alembic history      # 전체 이력 확인
+python -m pytest tests/ -v
 ```
 
-#### 5-2. 백엔드 서버 PostgreSQL 연결 확인
-```bash
-# PostgreSQL URL로 서버 기동
-DATABASE_URL=postgresql://smart_user:smart_password@192.168.0.35:5432/smart_inspection_db \
-  uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-# 로그에 "Application startup complete" 확인
-# Swagger: http://localhost:8000/docs
+### 기대 결과
+```
+tests/test_auth.py::test_login_success PASSED
+tests/test_auth.py::test_login_wrong_password PASSED
+... (28개 전체)
+======================== 28 passed in 6.18s ========================
 ```
 
-#### 5-3. CRUD 통합 테스트
-```bash
-# 로그인
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -d "username=admin@smartinspection.com&password=admin123"
+### CI 자동 실행 확인
+- [ ] GitHub에 push 시 GitHub Actions `backend` job 자동 실행 확인
+- [ ] PR 생성 시 pytest 결과가 Check로 표시되는지 확인
+- [ ] 실패하는 테스트 추가 후 CI가 실패하는지 확인 (정상 동작 검증)
 
-# 현장 목록 조회 (PostgreSQL에서 반환되는지 확인)
-curl http://localhost:8000/api/v1/sites \
-  -H "Authorization: Bearer {token}"
-```
-
-#### 5-4. 씨드 데이터 삽입
+### 테스트 커버리지 확인
 ```bash
-# PostgreSQL URL 설정 후 씨드 실행
-DATABASE_URL=postgresql://smart_user:smart_password@192.168.0.35:5432/smart_inspection_db \
-  python -m app.core.seed
+pip install pytest-cov
+python -m pytest tests/ --cov=app --cov-report=term-missing
 ```
 
 ### 확인 포인트
-- [ ] `alembic current`가 `7fc9390837e0` 반환하는지 확인
-- [ ] 서버 기동 시 PostgreSQL 연결 오류 없는지 확인
-- [ ] 씨드 데이터 삽입 후 API 조회 정상 동작 확인
-- [ ] SQLite fallback이 필요한 경우 `DATABASE_URL` 미설정 시 자동 전환 확인
+- [ ] 28개 테스트 전체 통과
+- [ ] SQLite in-memory로 PostgreSQL 없이 실행 가능 확인
+- [ ] 테스트 간 DB 독립성 확인 (autouse fixture)
+- [ ] admin/inspector 권한 분리 테스트 정상 동작
 
 ---
 
-## 6. 릴리즈 APK 실기기 설치 및 동작 확인
+## 5. Nginx + HTTPS (Phase 3 신규)
 
 ### 사전 준비
-- Android 실기기 준비 (API 24 이상)
-- 기기 설정 → 개발자 옵션 → USB 디버깅 활성화
-- 기기 설정 → 보안 → 알 수 없는 출처 허용
+- 도메인 구입 및 DNS A 레코드 설정 (서버 IP 연결)
+- `nginx/conf.d/app.conf`의 `YOUR_DOMAIN.com` → 실제 도메인 교체
+- `nginx/init-letsencrypt.sh`의 `DOMAIN`, `EMAIL` 변수 설정
 
 ### 테스트 방법
 
-#### 6-1. APK 실기기 설치
+#### 5-1. HTTP → HTTPS 리다이렉트 확인
 ```bash
-# ADB로 설치
-adb install smart_inspection_app/build/app/outputs/flutter-apk/app-release.apk
-
-# 또는 파일 직접 전송 후 설치
-# 파일 경로: build/app/outputs/flutter-apk/app-release.apk (49MB)
+curl -I http://YOUR_DOMAIN.com/
+# 기대: HTTP/1.1 301 Moved Permanently
+# Location: https://YOUR_DOMAIN.com/
 ```
 
-#### 6-2. 서명 검증
+#### 5-2. HTTPS 접근 확인
 ```bash
-# APK 서명 확인
-keytool -printcert -jarfile app-release.apk
-# Owner: CN=Smart Inspection, OU=Dev, O=SmartDB, L=Seoul, ST=Seoul, C=KR 확인
+curl -I https://YOUR_DOMAIN.com/
+# 기대: HTTP/2 200
 ```
 
-#### 6-3. 실기기 기능 테스트
-- 로그인 → JWT 토큰 정상 발급 및 저장 확인
-- 현장/점검/결함 CRUD 확인
-- STT: 실기기 마이크로 한국어 음성 입력 확인 (에뮬레이터보다 정확도 높음)
-- 카메라: 실 카메라로 사진 촬영 후 OCR 확인
-- 릴리즈 빌드 ProGuard 난독화 후 앱 정상 동작 확인
+#### 5-3. API 프록시 확인
+```bash
+curl https://YOUR_DOMAIN.com/api/v1/auth/me \
+  -H "Authorization: Bearer {token}"
+```
+
+#### 5-4. WebSocket 프록시 확인
+```javascript
+// 브라우저 콘솔에서
+const ws = new WebSocket("wss://YOUR_DOMAIN.com/ws/sites/{site_id}/live?token={token}");
+ws.onopen = () => console.log("WS 연결 성공");
+```
+
+#### 5-5. SSL 인증서 등급 확인
+- https://www.ssllabs.com/ssltest/ 에서 도메인 입력 → A등급 이상 확인
 
 ### 확인 포인트
-- [ ] 릴리즈 APK 설치 및 실행 성공
-- [ ] ProGuard 난독화 후 API 통신 정상 동작 확인
-- [ ] 실기기에서 STT 한국어 인식 정확도 확인
-- [ ] 실기기 카메라 OCR 동작 확인
-- [ ] `flutter_secure_storage` 토큰 암호화 저장 확인
-- [ ] 앱 종료 후 재진입 시 자동 로그인 확인
+- [ ] HTTP → HTTPS 301 리다이렉트 동작
+- [ ] Let's Encrypt 인증서 발급 성공 (STAGING=0)
+- [ ] HSTS 헤더 (`Strict-Transport-Security`) 응답 확인
+- [ ] `/api/` 프록시 정상 동작
+- [ ] `/ws/` WebSocket 프록시 업그레이드 성공
+- [ ] 인증서 자동 갱신 (certbot renew --dry-run) 성공
 
 ---
 
-## 7. 알려진 제약사항
+## 6. PostgreSQL 자동 백업 (Phase 3 신규)
+
+### 사전 준비
+```bash
+# Docker 스택 실행
+docker compose up -d db backup
+```
+
+### 테스트 방법
+
+#### 6-1. 수동 백업 실행
+```bash
+docker compose exec backup /scripts/backup_postgres.sh
+# 기대 로그:
+# [2026-04-19 03:00:00] Starting daily backup → /backups/daily/smart_inspection_db_20260419_030000.sql.gz
+# [2026-04-19 03:00:01] Daily backup done (48K)
+```
+
+#### 6-2. 백업 파일 확인
+```bash
+docker compose exec backup ls -lh /backups/daily/
+# 기대: .sql.gz 파일 1개 이상 존재
+```
+
+#### 6-3. 복구 테스트
+```bash
+# 백업 파일로 DB 복구
+./scripts/restore_postgres.sh backups/daily/smart_inspection_db_20260419_030000.sql.gz
+# 복구 후 API 정상 동작 확인
+curl http://localhost:8000/api/v1/sites/ -H "Authorization: Bearer {token}"
+```
+
+#### 6-4. 보관 정책 확인
+```bash
+# 일간 백업 8개 이상 생성 후 7개만 남는지 확인
+for i in $(seq 1 9); do
+  docker compose exec backup /scripts/backup_postgres.sh
+done
+docker compose exec backup ls /backups/daily/ | wc -l
+# 기대: 7
+```
+
+### 확인 포인트
+- [ ] 수동 백업 실행 시 `.sql.gz` 파일 생성 확인
+- [ ] 백업 파일 `gunzip`으로 압축 해제 가능 확인
+- [ ] 복구 후 데이터 정합성 확인 (테이블 수, 레코드 수)
+- [ ] 일간 7개 보관 정책 동작 확인
+- [ ] 주간(일요일) 백업 4개 보관 정책 동작 확인
+- [ ] cron 스케줄 등록 확인: `docker compose exec backup crontab -l`
+
+---
+
+## 7. Next.js 웹 대시보드 E2E (Phase 3 신규)
+
+### 사전 준비
+```bash
+# 백엔드 실행
+cd smart_inspection && source venv/bin/activate
+python main.py
+
+# 웹 실행
+cd web && npm run dev
+```
+
+### 테스트 방법
+
+#### 7-1. 로그인 플로우
+1. http://localhost:3000 접속
+2. → `/login`으로 자동 리다이렉트 확인
+3. `admin@smartinspection.com` / `admin123` 입력 후 로그인
+4. → `/dashboard`로 이동, 대시보드 카드 표시 확인
+
+#### 7-2. 대시보드 데이터 표시
+- 요약 카드 4개 (현장/점검/대기/미결결함) 숫자 표시 확인
+- 주간 BarChart 데이터 표시 확인
+- 결함 PieChart 표시 확인 (데이터 없으면 "미결 결함 없음" 메시지 표시)
+- 최근 점검 기록 테이블 표시 확인
+
+#### 7-3. 현장 목록/상세
+1. 사이드바 `현장 관리` 클릭
+2. 현장 목록 테이블 표시 확인
+3. `보기 →` 링크 클릭 → 현장 상세 페이지 이동
+4. 해당 현장의 점검 기록 목록 표시 확인
+
+#### 7-4. 점검 상세 + WebSocket 실시간 알림
+1. 점검 상세 페이지 진입
+2. 다른 탭/앱에서 해당 점검에 결함 등록 (API 호출)
+3. 웹 대시보드 점검 상세 페이지에서 실시간 결함 알림 표시 확인
+
+#### 7-5. 로그아웃
+- 사이드바 하단 `로그아웃` 클릭
+- `/login`으로 리다이렉트, 쿠키 삭제 확인
+
+#### 7-6. 401 처리
+- 만료된 토큰으로 API 요청 시 `/login`으로 자동 리다이렉트 확인
+
+### 확인 포인트
+- [ ] 로그인 후 JWT 쿠키 저장 확인 (DevTools → Application → Cookies)
+- [ ] 대시보드 요약 카드 데이터 정확성 확인
+- [ ] 주간 BarChart에 날짜별 점검 건수 표시 확인
+- [ ] 결함 PieChart에 심각도별 분포 표시 확인
+- [ ] 현장 목록 Badge (상태별 색상) 정상 표시
+- [ ] 점검 기록 Badge (합격/불합격/대기) 정상 표시
+- [ ] WebSocket 실시간 결함 알림 빨간색 박스 표시
+- [ ] 로그아웃 후 `/login` 리다이렉트
+- [ ] 인증 없이 `/dashboard` 접근 시 `/login` 리다이렉트
+
+---
+
+## 8. WebSocket E2E 테스트
+
+### 테스트 방법
+
+```bash
+# 1. 로그인으로 토큰 획득
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
+  -d "username=admin@smartinspection.com&password=admin123" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+# 2. 현장/점검 ID 확인
+SITE_ID=$(curl -s http://localhost:8000/api/v1/sites/ \
+  -H "Authorization: Bearer $TOKEN" | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+
+# 3. WebSocket 연결 (별도 터미널에서)
+# wscat 설치: npm install -g wscat
+wscat -c "ws://localhost:8000/ws/sites/$SITE_ID/live?token=$TOKEN"
+
+# 4. 결함 등록 (또 다른 터미널에서)
+INSPECTION_ID="..."   # 해당 현장의 점검 ID
+curl -X POST http://localhost:8000/api/v1/inspections/$INSPECTION_ID/defects \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"severity": "critical", "description": "균열 발견"}'
+
+# 5. WS 연결 터미널에서 브로드캐스트 메시지 수신 확인
+# {"type": "defect_created", "site_id": "...", "severity": "critical", ...}
+```
+
+### 확인 포인트
+- [ ] WebSocket 연결 시 JWT 검증 정상 동작
+- [ ] 결함 등록 즉시 WS 메시지 수신 확인
+- [ ] 잘못된 토큰으로 연결 시 거부 확인
+- [ ] 서버 재시작 후 WS 클라이언트 자동 재연결 확인 (Flutter WsService)
+
+---
+
+## 9. PostgreSQL 프로덕션 연결 검증
+
+### 테스트 방법
+
+```bash
+# .env 에 프로덕션 DB URL 설정
+DATABASE_URL=postgresql://smart_user:smart_password@192.168.0.35:5432/smart_inspection_db
+
+cd smart_inspection && source venv/bin/activate
+alembic current      # 현재 revision 확인
+alembic upgrade head # 마이그레이션 실행
+python main.py       # 서버 기동
+```
+
+### 확인 포인트
+- [ ] `alembic current`가 `7fc9390837e0` 반환 확인
+- [ ] 서버 기동 시 PostgreSQL 연결 오류 없음
+- [ ] 씨드 데이터 삽입 후 API 조회 정상 동작
+
+---
+
+## 10. 릴리즈 APK 실기기 설치
+
+### 테스트 방법
+
+```bash
+# ADB로 설치
+adb install smart_inspection_app/build/app/outputs/flutter-apk/app-release.apk
+```
+
+### 확인 포인트
+- [ ] 릴리즈 APK 설치 및 실행 성공
+- [ ] ProGuard 난독화 후 API 통신 정상 동작
+- [ ] 실기기에서 STT 한국어 인식 정확도 확인
+- [ ] 실기기 카메라 OCR 동작 확인
+- [ ] `flutter_secure_storage` 토큰 암호화 저장 확인
+
+---
+
+## 11. 알려진 제약사항
 
 | 항목 | 제약 | 비고 |
 |------|------|------|
 | Tesseract | 시스템 설치 필요 | `brew install tesseract tesseract-lang` |
 | OCR 정확도 | 저화질·필기체 인식률 낮음 | 인쇄물·표지판에 최적화 |
 | STT | 에뮬레이터 마이크 지원 제한적 | 실기기 테스트 권장 |
-| S3 pre-signed URL | 1시간 후 만료 | 만료 후 재요청 필요 (현재 자동갱신 미구현) |
-| S3 미설정 | 업로드 건너뜀, url=null | 사진 썸네일 미표시 (placeholder 표시) |
+| S3 pre-signed URL | 1시간 후 만료 | 자동갱신 미구현 |
+| Google Maps | API 키 필요 | `YOUR_MAPS_API_KEY` 교체 |
+| Nginx HTTPS | 공인 IP + 도메인 필요 | 로컬 환경에서는 HTTP로 테스트 |
+| refresh token | 클라이언트 자동 갱신 미구현 | 만료 시 재로그인 필요 |
