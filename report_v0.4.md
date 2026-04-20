@@ -290,5 +290,110 @@ docker compose up -d
 
 ---
 
+---
+
+## 7. 테스트 데이터 생성 및 API 검증 (2026-04-20)
+
+### 7.1 테스트 환경
+
+| 항목 | 내용 |
+|------|------|
+| DB | SQLite (`smart_inspection.db`, PostgreSQL 미기동 상태) |
+| 서버 | FastAPI + Uvicorn (`DATABASE_URL=sqlite:///./smart_inspection.db`) |
+| 기동 방법 | `DATABASE_URL=sqlite:///./smart_inspection.db python main.py` |
+
+---
+
+### 7.2 시드 데이터 생성 (`seed_data.py`)
+
+테스트용 현실적인 건설 현장 데이터를 SQLAlchemy ORM으로 직접 삽입.
+
+**생성 결과**
+
+| 구분 | 수량 | 상세 |
+|------|------|------|
+| 현장 (Site) | 10개 | active 8, paused 1, completed 1 |
+| 점검 (Inspection) | 10개 | pass 5, fail 3, pending 2 |
+| 결함 (Defect) | 6개 | critical 2, major 3, minor 1 |
+
+**현장 목록**
+
+| # | 현장명 | 주소 | 상태 |
+|---|--------|------|------|
+| 1 | 강남 주상복합 신축공사 | 서울시 강남구 테헤란로 123 | active |
+| 2 | 판교 오피스빌딩 공사 | 경기도 성남시 분당구 판교로 45 | active |
+| 3 | 인천 물류센터 건설 | 인천시 남동구 논현동 678 | active |
+| 4 | 부산 해운대 리조트 증축 | 부산시 해운대구 해운대해변로 99 | active |
+| 5 | 대전 도심 아파트 재개발 | 대전시 서구 둔산동 456 | active |
+| 6 | 수원 공장 리모델링 | 경기도 수원시 권선구 산업로 200 | paused |
+| 7 | 광주 복합문화시설 공사 | 광주시 북구 용봉동 88 | active |
+| 8 | 제주 호텔 신축 | 제주시 노형동 관광로 55 | active |
+| 9 | 서울 마포 주거단지 개발 | 서울시 마포구 상암동 1591 | completed |
+| 10 | 울산 산업단지 신축 | 울산시 북구 염포동 산업로 300 | active |
+
+**점검 기록**
+
+| 현장 | 공종 | 결과 | 주요 메모 |
+|------|------|------|----------|
+| 강남 주상복합 | 골조 | pass | 철근 배근 상태 양호, 피복두께 기준 충족 |
+| 판교 오피스빌딩 | 설비 | fail | 3층 배관 누수 의심, 즉시 보수 필요 |
+| 인천 물류센터 | 전기 | pass | 배선 규격·접지 이상 없음 |
+| 부산 해운대 리조트 | 마감 | pending | 외벽 마감재 시공 중, 재점검 예정 |
+| 대전 아파트 | 방수 | fail | 옥상 방수층 균열, 재시공 필요 |
+| 수원 공장 | 토목 | pass | 지하 다짐 상태 기준치 이상 |
+| 광주 복합문화 | 조경 | pass | 식재 계획 대비 90% 완료 |
+| 제주 호텔 | 소방 | fail | 스프링클러 헤드 도면 불일치, 수정 필요 |
+| 서울 마포 | 통신 | pending | 덕트 배관 완료, 케이블 포설 대기 |
+| 울산 산업단지 | 가설 | pass | 비계 안전기준 충족 |
+
+**결함 목록**
+
+| 현장 | 심각도 | 내용 |
+|------|--------|------|
+| 판교 오피스빌딩 | critical | 3층 급수관 연결부 누수 — 즉시 차수 조치 및 배관 교체 |
+| 판교 오피스빌딩 | major | 위생도기 고정 불량 — 볼트 재체결 |
+| 대전 아파트 | critical | 옥상 방수층 균열 3개소 — 우기 전 긴급 보수 |
+| 대전 아파트 | minor | 파라펫 상단 마감재 박리 — 코킹 재시공 |
+| 제주 호텔 | major | 스프링클러 헤드 22개소 도면 불일치 — 이설 |
+| 제주 호텔 | major | 소화전 함체 도어 개폐 불량 — 경첩 교체 |
+
+---
+
+### 7.3 버그 수정
+
+시드 데이터 삽입 후 서버 기동 중 발견된 버그 2건 수정.
+
+| 파일 | 버그 | 수정 내용 |
+|------|------|----------|
+| `app/routers/sites.py` | `SiteResponse.start_date / end_date` 타입을 `str \| None`으로 선언 → DB의 `datetime` 객체 직렬화 실패 (HTTP 500) | 타입을 `datetime \| None`으로 변경 |
+| `app/routers/dashboard.py` | `weekly-stats` 엔드포인트에서 `cast(day.strftime("%m/%d"), str)` 사용 — SQLAlchemy의 `cast()`를 Python 문자열에 잘못 적용해 `AttributeError` 발생 | `day.strftime("%m/%d")` 직접 사용으로 수정 |
+
+---
+
+### 7.4 API 테스트 결과
+
+SQLite 모드 FastAPI 서버(`http://localhost:8000`) 기동 후 전체 핵심 엔드포인트 검증.
+
+| # | 테스트 항목 | 엔드포인트 | 결과 |
+|---|------------|-----------|------|
+| 1 | JWT 로그인 | `POST /api/v1/auth/login` | ✅ 토큰 발급 성공 |
+| 2 | 현재 사용자 확인 | `GET /api/v1/auth/me` | ✅ Admin 반환 |
+| 3 | 현장 목록 조회 | `GET /api/v1/sites/` | ✅ 10개 반환 |
+| 4 | 현장 상세 조회 | `GET /api/v1/sites/{id}` | ✅ 이름·주소·위치 정상 |
+| 5 | 점검 목록 조회 | `GET /api/v1/inspections/` | ✅ 10개 반환 |
+| 6 | 대시보드 전체 현황 | `GET /api/v1/dashboard/` | ✅ 요약·결함·최근점검 정상 |
+| 7 | 주간 통계 | `GET /api/v1/dashboard/weekly-stats` | ✅ 7일 일별 데이터 반환 |
+| 8 | PDF 일일 보고서 | `POST /api/v1/reports/daily` | ✅ 3,886 bytes PDF 생성 |
+| 9 | PDF 주간 보고서 | `POST /api/v1/reports/weekly` | ✅ 2,897 bytes PDF 생성 |
+
+**대시보드 집계 결과**
+```
+총 현장: 10개 (active 8)
+총 점검: 10개 | 합격률: 50.0%
+미결 결함: 6개 (critical 2, major 3, minor 1)
+```
+
+---
+
 **보고서 작성자**: AI Assistant
-**최종 업데이트**: 2026-04-19 (Phase 3 완료)
+**최종 업데이트**: 2026-04-20 (테스트 데이터 생성 + API 검증 + 버그 수정 2건)

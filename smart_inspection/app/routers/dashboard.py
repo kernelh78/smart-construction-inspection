@@ -279,7 +279,7 @@ async def get_weekly_stats(
         ).scalar() or 0
 
         daily.append(DailyInspectionStat(
-            date=cast(day.strftime("%m/%d"), str),
+            date=day.strftime("%m/%d"),
             count=count,
             pass_count=pass_count,
         ))

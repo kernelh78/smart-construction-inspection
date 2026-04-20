@@ -41,8 +41,8 @@ class SiteResponse(BaseModel):
     lat: float | None
     lng: float | None
     status: str
-    start_date: str | None
-    end_date: str | None
+    start_date: datetime | None
+    end_date: datetime | None
     manager_id: str | None
     created_at: datetime = Field(..., description="생성 시간")
     class Config:
