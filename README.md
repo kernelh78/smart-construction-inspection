@@ -25,14 +25,14 @@
 - [ ] Google Maps 지도 표시 (API 키 필요)
 - [ ] 오프라인 동기화 실환경 테스트
 
-커밋 내용 (53 files changed, 4160 insertions):
-
-구분	내용
-보고서	report_v0.3.md — Phase 1/2 전체 반영, v0.4로 업데이트
-계획서	plan_v0.1.md — Phase 1/2 완료 표기, Phase 3 로드맵 갱신
-백엔드	smart_inspection/ gitlink → 일반 디렉토리 전환, 전체 파일 직접 추적 시작
-CI/CD	.github/workflows/ci.yml, docker-compose.yml
-Flutter	ws, local_db, connectivity, map, chart 신규 파일 7개 + 기존 파일 수정
-GitHub: https://github.com/kernelh78/smart-construction-inspection — push 완료
-
-참고: smart_inspection/ 이 이전에 잘못된 gitlink(160000)로 잠겨 있었는데, 이번에 일반 디렉토리로 전환하여 앞으로는 백엔드 파일이 정상 추적됩니다.
+#	테스트 항목	결과
+1	로그인 (JWT)	✅ 통과
+2	현장 목록 (10개)	✅ 통과
+3	점검 목록 (10개)	✅ 통과
+4	대시보드 전체 현황	✅ 통과
+5	현장 상세 조회	✅ 통과
+6	현재 사용자 확인	✅ 통과
+7	주간 통계	✅ 통과 (버그 수정 후)
+8	PDF 일일 보고서	✅ 통과
+9	PDF 주간 보고서	✅ 통과
+버그 2개를 수정했습니다:
