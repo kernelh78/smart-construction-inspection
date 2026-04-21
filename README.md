@@ -25,4 +25,14 @@
 - [ ] Google Maps 지도 표시 (API 키 필요)
 - [ ] 오프라인 동기화 실환경 테스트
 
-
+SQLite 모드 FastAPI 서버(http://localhost:8000) 기동 후 전체 핵심 엔드포인트 검증.
+#	테스트 항목	엔드포인트	결과
+1	JWT 로그인	POST /api/v1/auth/login	✅ 토큰 발급 성공
+2	현재 사용자 확인	GET /api/v1/auth/me	✅ Admin 반환
+3	현장 목록 조회	GET /api/v1/sites/	✅ 10개 반환
+4	현장 상세 조회	GET /api/v1/sites/{id}	✅ 이름·주소·위치 정상
+5	점검 목록 조회	GET /api/v1/inspections/	✅ 10개 반환
+6	대시보드 전체 현황	GET /api/v1/dashboard/	✅ 요약·결함·최근점검 정상
+7	주간 통계	GET /api/v1/dashboard/weekly-stats	✅ 7일 일별 데이터 반환
+8	PDF 일일 보고서	POST /api/v1/reports/daily	✅ 3,886 bytes PDF 생성
+9	PDF 주간 보고서	POST /api/v1/reports/weekly	✅ 2,897 bytes PDF 생성
